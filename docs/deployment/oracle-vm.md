@@ -49,7 +49,7 @@ Set these values:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_MODEL_NORMAL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_SITE_URL=
 OPENROUTER_APP_NAME=Quasi

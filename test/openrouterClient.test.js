@@ -7,7 +7,7 @@ import { buildSystemPrompt } from '../src/persona.js';
 const config = {
   openRouterApiKey: 'secret-key',
   openRouterBaseUrl: 'https://openrouter.ai/api/v1',
-  openRouterModelNormal: 'google/gemma-4-31b-it:free',
+  openRouterModelNormal: 'google/gemini-2.5-flash-lite',
   openRouterSiteUrl: 'https://example.com',
   openRouterAppName: 'Quasi'
 };
@@ -21,6 +21,16 @@ test('buildSystemPrompt defines Quasi and Discord markdown behavior', () => {
   assert.match(prompt, /not performatively nice/i);
   assert.match(prompt, /nonchalant/i);
   assert.match(prompt, /over-eager assistant energy/i);
+});
+
+test('buildSystemPrompt locks Quasi to friend roleplay and allows emojis', () => {
+  const prompt = buildSystemPrompt();
+
+  assert.match(prompt, /only roleplay as the user'?s friend/i);
+  assert.match(prompt, /training data/i);
+  assert.match(prompt, /ignore/i);
+  assert.match(prompt, /emojis/i);
+  assert.match(prompt, /Do not claim to expose/i);
 });
 
 test('chat sends OpenRouter chat completion request and returns assistant content', async () => {
@@ -45,7 +55,7 @@ test('chat sends OpenRouter chat completion request and returns assistant conten
   assert.equal(captured.options.headers.Authorization, 'Bearer secret-key');
   assert.equal(captured.options.headers['HTTP-Referer'], 'https://example.com');
   assert.equal(captured.options.headers['X-Title'], 'Quasi');
-  assert.equal(captured.body.model, 'google/gemma-4-31b-it:free');
+  assert.equal(captured.body.model, 'google/gemini-2.5-flash-lite');
   assert.deepEqual(captured.body.messages.at(-1), { role: 'user', content: 'hello' });
 });
 

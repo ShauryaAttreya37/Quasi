@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Build a production-ready Node.js Discord chatbot named Quasi using OpenRouter and `google/gemma-4-31b-it:free`.
+**Goal:** Build a production-ready Node.js Discord chatbot named Quasi using OpenRouter and `google/gemini-2.5-flash-lite`.
 
 **Architecture:** A small event-driven Discord bot routes incoming messages through a response policy, persona prompt builder, OpenRouter chat client, and Discord-safe markdown reply splitter. Dedicated-channel configuration is present in v1, but ambient responses remain disabled.
 
@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Normal OpenRouter model: `google/gemma-4-31b-it:free`.
+- Normal OpenRouter model: `google/gemini-2.5-flash-lite`.
 - Runtime: Node.js 18 or newer for built-in `fetch`.
 - Discord behavior v1: respond only to direct mentions and replies to Quasi's own messages.
 - Dedicated channel is configurable, but does not enable ambient channel chat in v1.
@@ -83,4 +83,3 @@
 - [ ] Add fallback response on model failures.
 - [ ] Add README setup and Discord intent notes.
 - [ ] Run tests and syntax checks.
-

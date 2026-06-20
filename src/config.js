@@ -1,4 +1,4 @@
-const DEFAULT_MODEL = 'google/gemma-4-31b-it:free';
+const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite';
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_APP_NAME = 'Quasi';
 const DEFAULT_LOG_LEVEL = 'info';

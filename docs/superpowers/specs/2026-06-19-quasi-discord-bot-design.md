@@ -10,7 +10,7 @@ Quasi is modeled as highly intelligent, kind underneath, but not performatively 
 
 ## Model
 
-Normal conversation uses OpenRouter model `google/gemma-4-31b-it:free` by default. The model ID is configurable through environment variables so it can be changed without code edits.
+Normal conversation uses OpenRouter model `google/gemini-2.5-flash-lite` by default. The model ID is configurable through environment variables so it can be changed without code edits.
 
 ## Discord Behavior
 
@@ -44,4 +44,3 @@ Use Node's built-in test runner for pure logic:
 - Discord reply splitting.
 
 Integration with Discord and OpenRouter is left to manual runtime verification because it requires real credentials.
-

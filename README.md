@@ -28,7 +28,7 @@ Fill in `.env`:
 ```env
 DISCORD_TOKEN=your_discord_bot_token
 OPENROUTER_API_KEY=your_openrouter_api_key
-OPENROUTER_MODEL_NORMAL=google/gemma-4-31b-it:free
+OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 QUASI_DEDICATED_CHANNEL_ID=your_optional_dedicated_channel_id
 ```
 

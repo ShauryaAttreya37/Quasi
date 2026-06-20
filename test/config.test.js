@@ -23,7 +23,7 @@ test('loadConfig trims values and applies production defaults', () => {
 
   assert.equal(config.discordToken, 'discord-token');
   assert.equal(config.openRouterApiKey, 'openrouter-key');
-  assert.equal(config.openRouterModelNormal, 'google/gemma-4-31b-it:free');
+  assert.equal(config.openRouterModelNormal, 'google/gemini-2.5-flash-lite');
   assert.equal(config.openRouterBaseUrl, 'https://openrouter.ai/api/v1');
   assert.equal(config.dedicatedChannelId, '123456789012345678');
   assert.equal(config.openRouterAppName, 'Quasi');
