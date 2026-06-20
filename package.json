@@ -1,0 +1,23 @@
+{
+  "name": "quasi-discord-bot",
+  "version": "0.1.0",
+  "description": "Quasi, a Discord AI chatbot powered by OpenRouter.",
+  "type": "module",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": ">=18.18.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test",
+    "check": "node --check index.js && node --check src/bot.js && node --check src/config.js && node --check src/discordFormat.js && node --check src/messagePolicy.js && node --check src/openrouterClient.js && node --check src/persona.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.7"
+  },
+  "overrides": {
+    "undici": "^6.27.0"
+  }
+}
