@@ -2,6 +2,8 @@ const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite';
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_APP_NAME = 'Quasi';
 const DEFAULT_TIME_ZONE = 'America/Los_Angeles';
+const DEFAULT_WEB_SEARCH_ENABLED = true;
+const DEFAULT_WEB_SEARCH_MAX_RESULTS = 3;
 const DEFAULT_LOG_LEVEL = 'info';
 
 export class ConfigError extends Error {
@@ -28,10 +30,32 @@ function validateTimeZone(timeZone) {
   }
 }
 
+function parseBoolean(value, defaultValue) {
+  const cleaned = clean(value).toLowerCase();
+  if (!cleaned) return defaultValue;
+  if (['1', 'true', 'yes', 'on'].includes(cleaned)) return true;
+  if (['0', 'false', 'no', 'off'].includes(cleaned)) return false;
+  throw new ConfigError(`Invalid boolean value: ${value}`);
+}
+
+function parseWebSearchMaxResults(value) {
+  const cleaned = clean(value);
+  if (!cleaned) return DEFAULT_WEB_SEARCH_MAX_RESULTS;
+
+  const parsed = Number.parseInt(cleaned, 10);
+  if (!Number.isInteger(parsed) || String(parsed) !== cleaned || parsed < 1 || parsed > 10) {
+    throw new ConfigError('Invalid QUASI_WEB_SEARCH_MAX_RESULTS: use an integer from 1 to 10.');
+  }
+
+  return parsed;
+}
+
 export function loadConfig(env = process.env) {
   const discordToken = clean(env.DISCORD_TOKEN);
   const openRouterApiKey = clean(env.OPENROUTER_API_KEY);
   const timeZone = clean(env.QUASI_TIME_ZONE) || DEFAULT_TIME_ZONE;
+  const webSearchEnabled = parseBoolean(env.QUASI_WEB_SEARCH_ENABLED, DEFAULT_WEB_SEARCH_ENABLED);
+  const webSearchMaxResults = parseWebSearchMaxResults(env.QUASI_WEB_SEARCH_MAX_RESULTS);
   const missing = [];
 
   if (!discordToken) missing.push('DISCORD_TOKEN');
@@ -55,6 +79,8 @@ export function loadConfig(env = process.env) {
     openRouterAppName: clean(env.OPENROUTER_APP_NAME) || DEFAULT_APP_NAME,
     dedicatedChannelId: optionalClean(env.QUASI_DEDICATED_CHANNEL_ID),
     timeZone,
+    webSearchEnabled,
+    webSearchMaxResults,
     logLevel: clean(env.LOG_LEVEL) || DEFAULT_LOG_LEVEL
   };
 }

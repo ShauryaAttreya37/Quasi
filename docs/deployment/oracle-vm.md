@@ -55,10 +55,14 @@ OPENROUTER_SITE_URL=
 OPENROUTER_APP_NAME=Quasi
 QUASI_DEDICATED_CHANNEL_ID=
 QUASI_TIME_ZONE=America/Los_Angeles
+QUASI_WEB_SEARCH_ENABLED=true
+QUASI_WEB_SEARCH_MAX_RESULTS=3
 LOG_LEVEL=info
 ```
 
 Keep `.env` only on the VM. Do not commit it.
+
+Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` if you need to disable live search.
 
 ## 4. Start Quasi
 

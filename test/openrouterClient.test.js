@@ -9,7 +9,9 @@ const config = {
   openRouterBaseUrl: 'https://openrouter.ai/api/v1',
   openRouterModelNormal: 'google/gemini-2.5-flash-lite',
   openRouterSiteUrl: 'https://example.com',
-  openRouterAppName: 'Quasi'
+  openRouterAppName: 'Quasi',
+  webSearchEnabled: true,
+  webSearchMaxResults: 3
 };
 
 test('buildSystemPrompt defines Quasi and Discord markdown behavior', () => {
@@ -31,6 +33,17 @@ test('buildSystemPrompt locks Quasi to friend roleplay and allows emojis', () =>
   assert.match(prompt, /ignore/i);
   assert.match(prompt, /emojis/i);
   assert.match(prompt, /Do not claim to expose/i);
+});
+
+test('buildSystemPrompt enables web-grounded answers and equation cards', () => {
+  const prompt = buildSystemPrompt();
+
+  assert.match(prompt, /web search/i);
+  assert.match(prompt, /markdown links/i);
+  assert.match(prompt, /Equation card/i);
+  assert.match(prompt, /```tex/);
+  assert.match(prompt, /LaTeX/i);
+  assert.match(prompt, /physics/i);
 });
 
 test('formatCurrentDateContext gives the model the real current date and time', () => {
@@ -80,7 +93,24 @@ test('chat sends OpenRouter chat completion request and returns assistant conten
   assert.equal(captured.options.headers['HTTP-Referer'], 'https://example.com');
   assert.equal(captured.options.headers['X-Title'], 'Quasi');
   assert.equal(captured.body.model, 'google/gemini-2.5-flash-lite');
+  assert.deepEqual(captured.body.plugins, [{ id: 'web', max_results: 3 }]);
   assert.deepEqual(captured.body.messages.at(-1), { role: 'user', content: 'hello' });
+});
+
+test('chat omits web plugin when disabled', async () => {
+  let captured;
+  const fetchImpl = async (url, options) => {
+    captured = { url, options, body: JSON.parse(options.body) };
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: 'Offline answer.' } }] })
+    };
+  };
+
+  const client = createOpenRouterClient({ ...config, webSearchEnabled: false }, fetchImpl);
+  await client.chat([{ role: 'user', content: 'hello' }]);
+
+  assert.equal(captured.body.plugins, undefined);
 });
 
 test('chat throws OpenRouterError on provider failure', async () => {

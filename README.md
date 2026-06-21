@@ -31,7 +31,11 @@ OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 QUASI_DEDICATED_CHANNEL_ID=your_optional_dedicated_channel_id
 QUASI_TIME_ZONE=America/Los_Angeles
+QUASI_WEB_SEARCH_ENABLED=true
+QUASI_WEB_SEARCH_MAX_RESULTS=3
 ```
+
+Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` to disable it.
 
 Start the bot:
 

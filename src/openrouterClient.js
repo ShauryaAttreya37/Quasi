@@ -18,6 +18,26 @@ function readAssistantContent(payload) {
   return content.trim();
 }
 
+function buildRequestBody(config, messages, options) {
+  const body = {
+    model: options.model || config.openRouterModelNormal,
+    messages,
+    temperature: options.temperature ?? 0.75,
+    max_tokens: options.maxTokens ?? 900
+  };
+
+  if (config.webSearchEnabled) {
+    body.plugins = [
+      {
+        id: 'web',
+        max_results: options.webSearchMaxResults || config.webSearchMaxResults || 3
+      }
+    ];
+  }
+
+  return body;
+}
+
 export function createOpenRouterClient(config, fetchImpl = globalThis.fetch) {
   if (typeof fetchImpl !== 'function') {
     throw new OpenRouterError('No fetch implementation is available. Use Node.js 18 or newer.');
@@ -40,12 +60,7 @@ export function createOpenRouterClient(config, fetchImpl = globalThis.fetch) {
       const response = await fetchImpl(endpoint, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          model: options.model || config.openRouterModelNormal,
-          messages,
-          temperature: options.temperature ?? 0.75,
-          max_tokens: options.maxTokens ?? 900
-        })
+        body: JSON.stringify(buildRequestBody(config, messages, options))
       });
 
       if (!response.ok) {
@@ -59,4 +74,3 @@ export function createOpenRouterClient(config, fetchImpl = globalThis.fetch) {
     }
   };
 }
-
