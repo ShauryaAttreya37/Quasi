@@ -34,22 +34,22 @@ test('buildSystemPrompt locks Quasi to friend roleplay and allows emojis', () =>
 });
 
 test('formatCurrentDateContext gives the model the real current date and time', () => {
-  const context = formatCurrentDateContext(new Date('2026-06-21T03:30:00.000Z'), 'Asia/Kolkata');
+  const context = formatCurrentDateContext(new Date('2026-06-21T03:30:00.000Z'), 'America/Los_Angeles');
 
   assert.match(context, /Current real-world date and time:/);
-  assert.match(context, /Sunday, 21 June 2026/);
-  assert.match(context, /09:00/);
-  assert.match(context, /Asia\/Kolkata/);
+  assert.match(context, /Saturday, 20 June 2026/);
+  assert.match(context, /20:30/);
+  assert.match(context, /America\/Los_Angeles/);
 });
 
 test('buildMessagesForUser injects current date context into the system message', () => {
   const messages = buildMessagesForUser('Shaurya', 'what year is it?', {
     now: new Date('2026-06-21T03:30:00.000Z'),
-    timeZone: 'Asia/Kolkata'
+    timeZone: 'America/Los_Angeles'
   });
 
   assert.match(messages[0].content, /Current real-world date and time:/);
-  assert.match(messages[0].content, /Sunday, 21 June 2026/);
+  assert.match(messages[0].content, /Saturday, 20 June 2026/);
   assert.match(messages[0].content, /answer date, time, day, and year questions from this runtime context/i);
   assert.deepEqual(messages[1], {
     role: 'user',

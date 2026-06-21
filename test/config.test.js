@@ -27,7 +27,7 @@ test('loadConfig trims values and applies production defaults', () => {
   assert.equal(config.openRouterBaseUrl, 'https://openrouter.ai/api/v1');
   assert.equal(config.dedicatedChannelId, '123456789012345678');
   assert.equal(config.openRouterAppName, 'Quasi');
-  assert.equal(config.timeZone, 'Asia/Kolkata');
+  assert.equal(config.timeZone, 'America/Los_Angeles');
   assert.equal(config.logLevel, 'info');
 });
 

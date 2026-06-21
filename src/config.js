@@ -1,7 +1,7 @@
 const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite';
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_APP_NAME = 'Quasi';
-const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+const DEFAULT_TIME_ZONE = 'America/Los_Angeles';
 const DEFAULT_LOG_LEVEL = 'info';
 
 export class ConfigError extends Error {

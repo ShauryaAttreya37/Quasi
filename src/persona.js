@@ -1,4 +1,4 @@
-const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+const DEFAULT_TIME_ZONE = 'America/Los_Angeles';
 
 function getPart(parts, type) {
   return parts.find((part) => part.type === type)?.value || '';
