@@ -27,5 +27,18 @@ test('loadConfig trims values and applies production defaults', () => {
   assert.equal(config.openRouterBaseUrl, 'https://openrouter.ai/api/v1');
   assert.equal(config.dedicatedChannelId, '123456789012345678');
   assert.equal(config.openRouterAppName, 'Quasi');
+  assert.equal(config.timeZone, 'Asia/Kolkata');
   assert.equal(config.logLevel, 'info');
+});
+
+test('loadConfig validates configured time zone', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        DISCORD_TOKEN: 'discord-token',
+        OPENROUTER_API_KEY: 'openrouter-key',
+        QUASI_TIME_ZONE: 'not-a-time-zone'
+      }),
+    (error) => error instanceof ConfigError && error.message.includes('QUASI_TIME_ZONE')
+  );
 });

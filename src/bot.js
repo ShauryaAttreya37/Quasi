@@ -81,7 +81,9 @@ export async function startBot(config, dependencies = {}) {
     try {
       await message.channel.sendTyping();
       const userContent = stripBotMention(message.content, clientUserId);
-      const messages = buildMessagesForUser(getUserDisplayName(message), userContent || message.content);
+      const messages = buildMessagesForUser(getUserDisplayName(message), userContent || message.content, {
+        timeZone: config.timeZone
+      });
       debugLog(config, logger, 'Sending message to OpenRouter.', {
         channelId: message.channelId,
         reason: decision.reason

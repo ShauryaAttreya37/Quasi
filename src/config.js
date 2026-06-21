@@ -1,6 +1,7 @@
 const DEFAULT_MODEL = 'google/gemini-2.5-flash-lite';
 const DEFAULT_OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const DEFAULT_APP_NAME = 'Quasi';
+const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
 const DEFAULT_LOG_LEVEL = 'info';
 
 export class ConfigError extends Error {
@@ -19,9 +20,18 @@ function optionalClean(value) {
   return cleaned.length > 0 ? cleaned : undefined;
 }
 
+function validateTimeZone(timeZone) {
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone }).format(new Date());
+  } catch {
+    throw new ConfigError(`Invalid QUASI_TIME_ZONE: ${timeZone}`);
+  }
+}
+
 export function loadConfig(env = process.env) {
   const discordToken = clean(env.DISCORD_TOKEN);
   const openRouterApiKey = clean(env.OPENROUTER_API_KEY);
+  const timeZone = clean(env.QUASI_TIME_ZONE) || DEFAULT_TIME_ZONE;
   const missing = [];
 
   if (!discordToken) missing.push('DISCORD_TOKEN');
@@ -34,6 +44,8 @@ export function loadConfig(env = process.env) {
     );
   }
 
+  validateTimeZone(timeZone);
+
   return {
     discordToken,
     openRouterApiKey,
@@ -42,6 +54,7 @@ export function loadConfig(env = process.env) {
     openRouterSiteUrl: optionalClean(env.OPENROUTER_SITE_URL),
     openRouterAppName: clean(env.OPENROUTER_APP_NAME) || DEFAULT_APP_NAME,
     dedicatedChannelId: optionalClean(env.QUASI_DEDICATED_CHANNEL_ID),
+    timeZone,
     logLevel: clean(env.LOG_LEVEL) || DEFAULT_LOG_LEVEL
   };
 }

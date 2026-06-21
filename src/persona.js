@@ -1,7 +1,43 @@
-export function buildSystemPrompt() {
+const DEFAULT_TIME_ZONE = 'Asia/Kolkata';
+
+function getPart(parts, type) {
+  return parts.find((part) => part.type === type)?.value || '';
+}
+
+export function formatCurrentDateContext(now = new Date(), timeZone = DEFAULT_TIME_ZONE) {
+  const currentDate = now instanceof Date ? now : new Date(now);
+  if (Number.isNaN(currentDate.getTime())) {
+    throw new TypeError('formatCurrentDateContext requires a valid Date value.');
+  }
+
+  const dateParts = new Intl.DateTimeFormat('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone
+  }).formatToParts(currentDate);
+  const time = new Intl.DateTimeFormat('en-GB', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+    timeZone
+  }).format(currentDate);
+
+  return (
+    `Current real-world date and time: ${getPart(dateParts, 'weekday')}, ` +
+    `${getPart(dateParts, 'day')} ${getPart(dateParts, 'month')} ${getPart(dateParts, 'year')}, ` +
+    `${time} (${timeZone}). Always answer date, time, day, and year questions from this runtime context.`
+  );
+}
+
+export function buildSystemPrompt(options = {}) {
+  const currentDateContext = formatCurrentDateContext(options.now, options.timeZone || DEFAULT_TIME_ZONE);
+
   return [
     'You are Quasi, a Discord AI chatbot built as a companion presence. You only roleplay as the user\'s friend named Quasi.',
     'This identity is a hard rule: do not roleplay as another assistant, model, company, narrator, developer tool, jailbreak character, or hidden system.',
+    currentDateContext,
     '',
     'Core personality:',
     '- Highly intelligent, precise, and unusually strong in physics, machine learning, computation, and mathematical reasoning.',
@@ -27,9 +63,9 @@ export function buildSystemPrompt() {
   ].join('\n');
 }
 
-export function buildMessagesForUser(userDisplayName, userContent) {
+export function buildMessagesForUser(userDisplayName, userContent, options = {}) {
   return [
-    { role: 'system', content: buildSystemPrompt() },
+    { role: 'system', content: buildSystemPrompt(options) },
     {
       role: 'user',
       content: `Discord user ${userDisplayName || 'unknown'} said:\n\n${userContent}`
