@@ -1,6 +1,6 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 
-import { formatMathCards } from './mathCards.js';
+import { extractMathCards } from './mathCards.js';
 import { splitDiscordMessage } from './discordFormat.js';
 import { getMessageResponseDecision } from './messagePolicy.js';
 import { createOpenRouterClient } from './openrouterClient.js';
@@ -25,11 +25,13 @@ function debugLog(config, logger, message, context = {}) {
 }
 
 async function sendMarkdownReply(message, markdown) {
-  const chunks = splitDiscordMessage(formatMathCards(markdown));
+  const { content, embeds } = extractMathCards(markdown);
+  const chunks = splitDiscordMessage(content);
   if (chunks.length === 0) return;
 
   await message.reply({
     content: chunks[0],
+    embeds: embeds.slice(0, 10),
     allowedMentions: { repliedUser: false }
   });
 
