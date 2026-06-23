@@ -50,6 +50,16 @@ function parseWebSearchMaxResults(value) {
   return parsed;
 }
 
+function parsePlotTimeout(value) {
+  const cleaned = clean(value);
+  if (!cleaned) return 15000;
+  const parsed = Number.parseInt(cleaned, 10);
+  if (!Number.isInteger(parsed) || String(parsed) !== cleaned || parsed < 1000 || parsed > 60000) {
+    throw new ConfigError('Invalid QUASI_PLOT_TIMEOUT_MS: use an integer from 1000 to 60000.');
+  }
+  return parsed;
+}
+
 export function loadConfig(env = process.env) {
   const discordToken = clean(env.DISCORD_TOKEN);
   const openRouterApiKey = clean(env.OPENROUTER_API_KEY);
@@ -78,6 +88,10 @@ export function loadConfig(env = process.env) {
     openRouterSiteUrl: optionalClean(env.OPENROUTER_SITE_URL),
     openRouterAppName: clean(env.OPENROUTER_APP_NAME) || DEFAULT_APP_NAME,
     dedicatedChannelId: optionalClean(env.QUASI_DEDICATED_CHANNEL_ID),
+    discordClientId: optionalClean(env.DISCORD_CLIENT_ID),
+    discordGuildId: optionalClean(env.DISCORD_GUILD_ID),
+    pythonBin: clean(env.QUASI_PYTHON_BIN) || 'python3',
+    plotTimeoutMs: parsePlotTimeout(env.QUASI_PLOT_TIMEOUT_MS),
     timeZone,
     webSearchEnabled,
     webSearchMaxResults,

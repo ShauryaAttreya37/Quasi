@@ -5,6 +5,7 @@ import { splitDiscordMessage } from './discordFormat.js';
 import { getMessageResponseDecision } from './messagePolicy.js';
 import { createOpenRouterClient } from './openrouterClient.js';
 import { buildMessagesForUser } from './persona.js';
+import { commandMap } from './commands/index.js';
 
 const FALLBACK_REPLY =
   '**Quasi hit a provider snag.**\n\nTry again in a moment. Even distributed systems occasionally trip over their own shoelaces.';
@@ -63,6 +64,28 @@ export async function startBot(config, dependencies = {}) {
     logger.info(`Quasi is online as ${client.user.tag}.`);
     if (config.dedicatedChannelId) {
       logger.info(`Dedicated channel configured: ${config.dedicatedChannelId}`);
+    }
+  });
+
+  client.on('interactionCreate', async (interaction) => {
+    if (!interaction.isChatInputCommand()) return;
+    const command = commandMap.get(interaction.commandName);
+    if (!command) return;
+
+    try {
+      await command.execute(interaction, { config, logger });
+    } catch (error) {
+      logger.error(`Slash command "${interaction.commandName}" failed.`, error);
+      const reply = { content: '❌ Command failed unexpectedly.' };
+      try {
+        if (interaction.deferred || interaction.replied) {
+          await interaction.editReply(reply);
+        } else {
+          await interaction.reply({ ...reply, ephemeral: true });
+        }
+      } catch (replyError) {
+        logger.error('Failed to report slash command error.', replyError);
+      }
     }
   });
 

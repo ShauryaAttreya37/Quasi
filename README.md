@@ -15,27 +15,53 @@ Quasi is highly intelligent, technically serious, kind underneath, and not perfo
 - An OpenRouter API key
 - Discord bot permissions for reading messages and sending messages
 - Discord **Message Content Intent** enabled in the bot portal
+- **Python 3** with `numpy` and `matplotlib` (only for the `/plot3d` command)
+
+LaTeX rendering (`/latex`) is pure JavaScript (MathJax + resvg) and needs **no** system
+LaTeX/TeXLive install. 3D plotting (`/plot3d`) shells out to Python.
 
 ## Setup
 
 ```bash
 npm install
 copy .env.example .env
+
+# Python deps for /plot3d (Linux VM):
+python3 -m pip install numpy matplotlib
 ```
 
 Fill in `.env`:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_discord_application_id
+DISCORD_GUILD_ID=your_test_guild_id_optional
 OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 QUASI_DEDICATED_CHANNEL_ID=your_optional_dedicated_channel_id
 QUASI_TIME_ZONE=America/Los_Angeles
 QUASI_WEB_SEARCH_ENABLED=true
 QUASI_WEB_SEARCH_MAX_RESULTS=3
+QUASI_PYTHON_BIN=python3
+QUASI_PLOT_TIMEOUT_MS=15000
 ```
 
 Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` to disable it.
+
+`QUASI_PYTHON_BIN` is the Python interpreter used for `/plot3d`. On Windows this is
+often the full path to `python.exe`; on the Oracle VM `python3` is usually correct.
+
+### Register slash commands
+
+Slash commands must be registered once (and again whenever their definitions change):
+
+```bash
+npm run register
+```
+
+With `DISCORD_GUILD_ID` set this registers to that guild instantly (best for testing).
+Without it (or with `npm run register -- --global`) it registers globally, which can take
+up to an hour to propagate.
 
 Start the bot:
 
@@ -59,6 +85,37 @@ npm run check
 
 Use the production deployment guide in [docs/deployment/oracle-vm.md](docs/deployment/oracle-vm.md) to run Quasi on an Oracle Cloud Ubuntu VM with Node.js 20 and `pm2`.
 
+## Slash Commands
+
+Because Discord does not render LaTeX in bot messages, Quasi renders math and plots to
+images and posts them as embeds.
+
+### `/latex`
+
+Render a LaTeX expression to a PNG.
+
+- `expression` (required) — LaTeX without surrounding `$`, e.g. `\frac{-b\pm\sqrt{b^2-4ac}}{2a}`
+- `inline` (optional) — render in inline (text-size) mode instead of display mode
+
+### `/plot3d surface`
+
+Plot a surface `z = f(x, y)`.
+
+- `expression` (required) — e.g. `sin(sqrt(x**2 + y**2))`
+- `xmin` / `xmax` / `ymin` / `ymax` (optional) — domain, default `-5..5`
+- `colormap` (optional) — `viridis` (default), `plasma`, `inferno`, `magma`, `cividis`, `turbo`, `coolwarm`
+
+### `/plot3d curve`
+
+Plot a parametric curve `(x(t), y(t), z(t))`.
+
+- `x`, `y`, `z` (required) — expressions in `t`, e.g. `cos(t)`, `sin(t)`, `t/3`
+- `tmin` / `tmax` (optional) — parameter range, default `0..2π`
+
+Expressions allow numpy math functions (`sin`, `cos`, `exp`, `sqrt`, `log`, …) and the
+constants `pi`, `e`, `tau`. They are evaluated through a locked-down AST whitelist — no
+builtins, imports, or attribute access — so user input cannot execute arbitrary code.
+
 ## Discord Behavior
 
 Quasi responds when:
@@ -80,6 +137,11 @@ src/persona.js           Quasi's system prompt and message builder
 src/openrouterClient.js  OpenRouter chat completions client
 src/messagePolicy.js     Discord response policy
 src/discordFormat.js     Discord reply splitting
+src/latexRender.js       LaTeX -> PNG via MathJax + resvg
+src/plot3d.js            spawns the Python 3D plot worker
+src/python/plot3d.py     matplotlib 3D plotter with safe expression eval
+src/commands/            slash command definitions (latex, plot3d)
 src/bot.js               Discord runtime wiring
+scripts/register-commands.js  registers slash commands with Discord
 index.js                 startup entrypoint
 ```

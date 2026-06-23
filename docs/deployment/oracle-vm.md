@@ -17,6 +17,15 @@ npm --version
 pm2 --version
 ```
 
+Install Python 3 and the plotting libraries used by `/plot3d`:
+
+```bash
+sudo apt install -y python3 python3-pip python3-numpy python3-matplotlib
+python3 -c "import numpy, matplotlib; print('plot deps ok')"
+```
+
+`/latex` is pure JavaScript (MathJax + resvg) and needs no system LaTeX install.
+
 ## 2. Clone the Private Repository
 
 Replace `<github-user>` with the GitHub account or organization that owns the repo.
@@ -48,6 +57,8 @@ Set these values:
 
 ```env
 DISCORD_TOKEN=your_discord_bot_token
+DISCORD_CLIENT_ID=your_discord_application_id
+DISCORD_GUILD_ID=
 OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
@@ -57,6 +68,8 @@ QUASI_DEDICATED_CHANNEL_ID=
 QUASI_TIME_ZONE=America/Los_Angeles
 QUASI_WEB_SEARCH_ENABLED=true
 QUASI_WEB_SEARCH_MAX_RESULTS=3
+QUASI_PYTHON_BIN=python3
+QUASI_PLOT_TIMEOUT_MS=15000
 LOG_LEVEL=info
 ```
 
@@ -69,6 +82,7 @@ Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set
 ```bash
 npm run check
 npm test
+npm run register   # register /latex and /plot3d slash commands (run again after command changes)
 pm2 start index.js --name quasi
 pm2 save
 pm2 startup systemd
@@ -92,6 +106,7 @@ git pull --ff-only
 npm ci --omit=dev
 npm run check
 npm test
+npm run register   # only needed if slash command definitions changed
 pm2 restart quasi --update-env
 pm2 save
 pm2 status
