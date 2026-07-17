@@ -3,6 +3,7 @@ import { renderLatexToPng } from './latexRender.js';
 const EQUATION_CARD_COLOR = 0x5865f2;
 const CODE_FENCE_PATTERN = /(```[\s\S]*?```)/gu;
 const FENCED_BLOCK_PATTERN = /```([^\n`]*)\n([\s\S]*?)```/gu;
+const EQUATION_MARKER_PATTERN = /\u0000QUASI_EQUATION_(\d+)\u0000/gu;
 
 function isDisplayMath(expression) {
   return String(expression ?? '').trim().length > 0;
@@ -44,45 +45,82 @@ function fallbackCard(expression, index) {
   return [`**Equation card: Equation ${index}**`, '```tex', expression.trim(), '```'].join('\n');
 }
 
-function appendEmbed(embeds, files, expression) {
-  if (embeds.length >= 10) return undefined;
-  const index = embeds.length + 1;
-  embeds.push(makeEmbed(expression, index));
-  try {
-    const { buffer } = renderLatexToPng(expression, { display: true });
-    files.push({ attachment: buffer, name: `quasi-equation-${index}.png` });
-  } catch {
-    // Keep the readable text fallback when a provider emits malformed TeX.
-  }
-  return `Equation ${index}`;
+function equationMarker(index) {
+  return `\u0000QUASI_EQUATION_${index}\u0000`;
 }
 
-function extractFromTextSegment(segment, embeds, files) {
+function appendEmbed(embeds, equations, expression) {
+  if (embeds.length >= 10) return undefined;
+  const index = embeds.length + 1;
+  try {
+    const { buffer } = renderLatexToPng(expression, { display: true });
+    const file = { attachment: buffer, name: `quasi-equation-${index}.png` };
+    embeds.push(makeEmbed(expression, index));
+    equations.push({ index, file });
+    return equationMarker(index);
+  } catch {
+    return fallbackCard(expression, index);
+  }
+}
+
+function extractFromTextSegment(segment, embeds, equations) {
   let output = segment.replace(/\$\$([\s\S]+?)\$\$/gu, (match, expression) => {
     if (!isDisplayMath(expression)) return match;
-    return appendEmbed(embeds, files, expression) || fallbackCard(expression, embeds.length + 1);
+    return appendEmbed(embeds, equations, expression) || fallbackCard(expression, embeds.length + 1);
   });
 
   output = output.replace(/(^|[^\\$])\$([^\n$]+?)\$/gu, (match, prefix, expression) => {
     if (!isCardWorthyInlineMath(expression)) return match;
-    const label = appendEmbed(embeds, files, expression);
+    const label = appendEmbed(embeds, equations, expression);
     return label ? `${prefix}${label}` : `${prefix}${fallbackCard(expression, embeds.length + 1)}`;
   });
 
   return output;
 }
 
+function buildSegments(processed, equations) {
+  const equationByIndex = new Map(equations.map((equation) => [equation.index, equation]));
+  const segments = [];
+  let cursor = 0;
+
+  for (const match of processed.matchAll(EQUATION_MARKER_PATTERN)) {
+    const text = processed.slice(cursor, match.index).trim();
+    if (text) segments.push({ type: 'text', content: text });
+    const equation = equationByIndex.get(Number.parseInt(match[1], 10));
+    if (equation) {
+      segments.push({
+        type: 'equation',
+        content: `**Equation ${equation.index}**`,
+        file: equation.file
+      });
+    }
+    cursor = match.index + match[0].length;
+  }
+
+  const tail = processed.slice(cursor).trim();
+  if (tail) segments.push({ type: 'text', content: tail });
+  return segments;
+}
+
 export function extractMathCards(markdown) {
   const source = String(markdown ?? '');
   const normalized = normalizeMathSyntax(source);
-  if (!normalized.includes('$')) return { content: normalized, embeds: [], files: [] };
+  if (!normalized.includes('$')) {
+    const content = normalized.trim();
+    return {
+      content,
+      embeds: [],
+      files: [],
+      segments: content ? [{ type: 'text', content }] : []
+    };
+  }
 
   const embeds = [];
-  const files = [];
-  const content = normalized
+  const equations = [];
+  const processed = normalized
     .split(CODE_FENCE_PATTERN)
     .map((segment) =>
-      segment.startsWith('```') ? segment : extractFromTextSegment(segment, embeds, files)
+      segment.startsWith('```') ? segment : extractFromTextSegment(segment, embeds, equations)
     )
     .join('')
     .replace(/[ \t]{2,}/gu, ' ')
@@ -90,7 +128,9 @@ export function extractMathCards(markdown) {
     .replace(/\n{3,}/gu, '\n\n')
     .trim();
 
-  return { content, embeds, files };
+  const segments = buildSegments(processed, equations);
+  const content = processed.replace(EQUATION_MARKER_PATTERN, (match, index) => `Equation ${index}`);
+  return { content, embeds, files: equations.map((equation) => equation.file), segments };
 }
 
 export function formatMathCards(markdown) {

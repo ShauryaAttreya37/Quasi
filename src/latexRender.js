@@ -15,8 +15,10 @@ const svgOutput = new SVG({ fontCache: 'local' });
 const mathDocument = mathjax.document('', { InputJax: texInput, OutputJax: svgOutput });
 
 const MAX_INPUT_LENGTH = 2000;
-const FOREGROUND = '#111111';
-const BACKGROUND = '#ffffff';
+export const LATEX_RENDER_THEME = Object.freeze({
+  foreground: '#f2f3f5',
+  background: '#2b2d31'
+});
 const RENDER_ZOOM = 3.5; // SVG -> PNG upscale for crisp glyphs
 
 export class LatexRenderError extends Error {
@@ -67,11 +69,11 @@ export function renderLatexToPng(expression, options = {}) {
   }
 
   // MathJax glyphs use currentColor; resvg has no DOM cascade, so inline the color.
-  const colored = svg.replace(/currentColor/gu, FOREGROUND);
+  const colored = svg.replace(/currentColor/gu, LATEX_RENDER_THEME.foreground);
 
   try {
     const resvg = new Resvg(colored, {
-      background: BACKGROUND,
+      background: LATEX_RENDER_THEME.background,
       fitTo: { mode: 'zoom', value: RENDER_ZOOM }
     });
     const rendered = resvg.render();

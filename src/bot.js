@@ -27,24 +27,38 @@ function debugLog(config, logger, message, context = {}) {
   logger.debug(message, context);
 }
 
-async function sendMarkdownReply(message, markdown) {
-  const { content, files } = extractMathCards(markdown);
-  const chunks = splitDiscordMessage(content);
-  if (chunks.length === 0 && files.length === 0) return;
+export async function sendMarkdownReply(message, markdown) {
+  const { segments } = extractMathCards(markdown);
+  let sent = false;
 
-  await message.reply({
-    content: chunks[0] || 'Rendered equations:',
-    files,
-    flags: MessageFlags.SuppressEmbeds,
-    allowedMentions: { repliedUser: false }
-  });
+  async function send(payload) {
+    const common = { flags: MessageFlags.SuppressEmbeds };
+    if (!sent) {
+      sent = true;
+      await message.reply({ ...payload, ...common, allowedMentions: { repliedUser: false } });
+      return;
+    }
+    await message.channel.send({ ...payload, ...common, allowedMentions: { parse: [] } });
+  }
 
-  for (const chunk of chunks.slice(1)) {
-    await message.channel.send({
-      content: chunk,
-      flags: MessageFlags.SuppressEmbeds,
-      allowedMentions: { parse: [] }
-    });
+  for (let index = 0; index < segments.length; index += 1) {
+    const segment = segments[index];
+    const next = segments[index + 1];
+
+    if (segment.type === 'text' && next?.type === 'equation') {
+      const chunks = splitDiscordMessage(segment.content);
+      for (const chunk of chunks.slice(0, -1)) await send({ content: chunk });
+      await send({ content: chunks.at(-1) || next.content, files: [next.file] });
+      index += 1;
+      continue;
+    }
+
+    if (segment.type === 'equation') {
+      await send({ content: segment.content, files: [segment.file] });
+      continue;
+    }
+
+    for (const chunk of splitDiscordMessage(segment.content)) await send({ content: chunk });
   }
 }
 
