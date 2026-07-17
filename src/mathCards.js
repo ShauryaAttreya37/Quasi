@@ -2,6 +2,7 @@ import { renderLatexToPng } from './latexRender.js';
 
 const EQUATION_CARD_COLOR = 0x5865f2;
 const CODE_FENCE_PATTERN = /(```[\s\S]*?```)/gu;
+const FENCED_BLOCK_PATTERN = /```([^\n`]*)\n([\s\S]*?)```/gu;
 
 function isDisplayMath(expression) {
   return String(expression ?? '').trim().length > 0;
@@ -11,6 +12,24 @@ function isCardWorthyInlineMath(expression) {
   const value = String(expression ?? '').trim();
   if (!value) return false;
   return /(?:=|\\frac|\\sqrt|\\sum|\\int|\\lim|\\approx|\\leq|\\geq|\\neq|\\cdot|\\times|\\nabla)/u.test(value);
+}
+
+function looksLikeLatex(expression) {
+  return /\\(?:begin|end|frac|dfrac|tfrac|partial|vec|mathbf|mathrm|text|nabla|rho|mu|sigma|tau|lambda|sum|int|sqrt|cdot|times)\b/u.test(
+    String(expression ?? '')
+  );
+}
+
+function normalizeMathSyntax(source) {
+  return source
+    .replace(FENCED_BLOCK_PATTERN, (match, language, expression) => {
+      const label = language.trim().toLowerCase();
+      const supportedLabel = ['tex', 'latex', 'math'].includes(label);
+      if (!supportedLabel && (label || !looksLikeLatex(expression))) return match;
+      return `$$\n${expression.trim()}\n$$`;
+    })
+    .replace(/\\\[([\s\S]+?)\\\]/gu, (match, expression) => `$$\n${expression.trim()}\n$$`)
+    .replace(/\\\(([^\n]+?)\\\)/gu, (match, expression) => `$${expression.trim()}$`);
 }
 
 function makeEmbed(expression, index) {
@@ -55,7 +74,7 @@ function extractFromTextSegment(segment, embeds, files) {
 
 export function extractMathCards(markdown) {
   const source = String(markdown ?? '');
-  const normalized = source.replace(/```(?:tex|latex)\s*\n([\s\S]*?)```/giu, '$$$$\n$1\n$$$$');
+  const normalized = normalizeMathSyntax(source);
   if (!normalized.includes('$')) return { content: normalized, embeds: [], files: [] };
 
   const embeds = [];
