@@ -1,11 +1,13 @@
-import { Client, GatewayIntentBits, Partials } from 'discord.js';
+import { Client, GatewayIntentBits, MessageFlags, Partials } from 'discord.js';
 
 import { extractMathCards } from './mathCards.js';
+import { collectConversationContext } from './conversationContext.js';
 import { splitDiscordMessage } from './discordFormat.js';
 import { getMessageResponseDecision } from './messagePolicy.js';
 import { createOpenRouterClient } from './openrouterClient.js';
 import { buildMessagesForUser } from './persona.js';
 import { commandMap } from './commands/index.js';
+import { shouldUseWebSearch } from './webSearchPolicy.js';
 
 const FALLBACK_REPLY =
   '**Quasi hit a provider snag.**\n\nTry again in a moment. Even distributed systems occasionally trip over their own shoelaces.';
@@ -26,19 +28,21 @@ function debugLog(config, logger, message, context = {}) {
 }
 
 async function sendMarkdownReply(message, markdown) {
-  const { content, embeds } = extractMathCards(markdown);
+  const { content, files } = extractMathCards(markdown);
   const chunks = splitDiscordMessage(content);
-  if (chunks.length === 0) return;
+  if (chunks.length === 0 && files.length === 0) return;
 
   await message.reply({
-    content: chunks[0],
-    embeds: embeds.slice(0, 10),
+    content: chunks[0] || 'Rendered equations:',
+    files,
+    flags: MessageFlags.SuppressEmbeds,
     allowedMentions: { repliedUser: false }
   });
 
   for (const chunk of chunks.slice(1)) {
     await message.channel.send({
       content: chunk,
+      flags: MessageFlags.SuppressEmbeds,
       allowedMentions: { parse: [] }
     });
   }
@@ -107,14 +111,19 @@ export async function startBot(config, dependencies = {}) {
     try {
       await message.channel.sendTyping();
       const userContent = stripBotMention(message.content, clientUserId);
+      const contextMessages = await collectConversationContext(message, clientUserId);
       const messages = buildMessagesForUser(getUserDisplayName(message), userContent || message.content, {
-        timeZone: config.timeZone
+        timeZone: config.timeZone,
+        contextMessages
       });
       debugLog(config, logger, 'Sending message to OpenRouter.', {
         channelId: message.channelId,
-        reason: decision.reason
+        reason: decision.reason,
+        contextMessages: contextMessages.length
       });
-      const reply = await openRouter.chat(messages);
+      const reply = await openRouter.chat(messages, {
+        webSearchEnabled: config.webSearchEnabled && shouldUseWebSearch(userContent || message.content)
+      });
       await sendMarkdownReply(message, reply);
       debugLog(config, logger, 'Sent Quasi reply.', { channelId: message.channelId });
     } catch (error) {

@@ -26,7 +26,8 @@ function buildRequestBody(config, messages, options) {
     max_tokens: options.maxTokens ?? 900
   };
 
-  if (config.webSearchEnabled) {
+  const webSearchEnabled = options.webSearchEnabled ?? config.webSearchEnabled;
+  if (webSearchEnabled) {
     body.plugins = [
       {
         id: 'web',

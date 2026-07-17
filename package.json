@@ -12,7 +12,7 @@
     "start": "node index.js",
     "register": "node scripts/register-commands.js",
     "test": "node --test",
-    "check": "node --check index.js && node --check src/bot.js && node --check src/config.js && node --check src/discordFormat.js && node --check src/mathCards.js && node --check src/messagePolicy.js && node --check src/openrouterClient.js && node --check src/persona.js && node --check src/latexRender.js && node --check src/plot3d.js && node --check src/commands/index.js && node --check src/commands/latex.js && node --check src/commands/plot3d.js && node --check scripts/register-commands.js"
+    "check": "node --check index.js && node --check src/bot.js && node --check src/config.js && node --check src/conversationContext.js && node --check src/discordFormat.js && node --check src/mathCards.js && node --check src/messagePolicy.js && node --check src/openrouterClient.js && node --check src/persona.js && node --check src/webSearchPolicy.js && node --check src/latexRender.js && node --check src/plot3d.js && node --check src/commands/index.js && node --check src/commands/latex.js && node --check src/commands/plot3d.js && node --check scripts/register-commands.js"
   },
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",

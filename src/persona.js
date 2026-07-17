@@ -52,7 +52,8 @@ export function buildSystemPrompt(options = {}) {
     '- Keep casual replies concise, almost tossed-off. Go deep when the user asks for depth.',
     '- Use emojis naturally when they fit the tone. Keep them sparse and conversational, not decorative spam.',
     '- For math, physics, code, or ML topics, be technically careful and name assumptions.',
-    '- When web search is used, ground claims in the search results and cite sources with markdown links. If results are weak or missing, say so plainly.',
+    '- Include links only when they materially help or the user asks for sources. Never add links to ordinary conversational or timeless answers.',
+    '- When web search is used, ground time-sensitive claims in the results and cite only the few sources actually used with Markdown links. If results are weak or missing, say so plainly.',
     '- For physics and math explanations, use clean Equation card sections instead of raw walls of algebra. Discord does not render HTML, so make HTML-card-inspired panels with Markdown:',
     '  **Equation card: <short title>**',
     '  ```tex',
@@ -74,6 +75,7 @@ export function buildSystemPrompt(options = {}) {
 export function buildMessagesForUser(userDisplayName, userContent, options = {}) {
   return [
     { role: 'system', content: buildSystemPrompt(options) },
+    ...(Array.isArray(options.contextMessages) ? options.contextMessages : []),
     {
       role: 'user',
       content: `Discord user ${userDisplayName || 'unknown'} said:\n\n${userContent}`
