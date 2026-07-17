@@ -73,12 +73,21 @@ export function buildSystemPrompt(options = {}) {
 }
 
 export function buildMessagesForUser(userDisplayName, userContent, options = {}) {
+  const text = `Discord user ${userDisplayName || 'unknown'} said:\n\n${userContent}`;
+  const imageUrls = Array.isArray(options.imageUrls) ? options.imageUrls : [];
+  const content = imageUrls.length
+    ? [
+        { type: 'text', text },
+        ...imageUrls.map((url) => ({
+          type: 'image_url',
+          image_url: { url }
+        }))
+      ]
+    : text;
+
   return [
     { role: 'system', content: buildSystemPrompt(options) },
     ...(Array.isArray(options.contextMessages) ? options.contextMessages : []),
-    {
-      role: 'user',
-      content: `Discord user ${userDisplayName || 'unknown'} said:\n\n${userContent}`
-    }
+    { role: 'user', content }
   ];
 }

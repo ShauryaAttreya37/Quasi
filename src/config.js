@@ -5,6 +5,8 @@ const DEFAULT_TIME_ZONE = 'America/Los_Angeles';
 const DEFAULT_WEB_SEARCH_ENABLED = true;
 const DEFAULT_WEB_SEARCH_MAX_RESULTS = 3;
 const DEFAULT_LOG_LEVEL = 'info';
+const DEFAULT_RATE_LIMIT_REQUESTS_PER_HOUR = 12;
+const DEFAULT_MAX_IMAGES_PER_REQUEST = 3;
 
 export class ConfigError extends Error {
   constructor(message) {
@@ -60,6 +62,16 @@ function parsePlotTimeout(value) {
   return parsed;
 }
 
+function parseBoundedInteger(value, defaultValue, name, minimum, maximum) {
+  const cleaned = clean(value);
+  if (!cleaned) return defaultValue;
+  const parsed = Number.parseInt(cleaned, 10);
+  if (!Number.isInteger(parsed) || String(parsed) !== cleaned || parsed < minimum || parsed > maximum) {
+    throw new ConfigError(`Invalid ${name}: use an integer from ${minimum} to ${maximum}.`);
+  }
+  return parsed;
+}
+
 export function loadConfig(env = process.env) {
   const discordToken = clean(env.DISCORD_TOKEN);
   const openRouterApiKey = clean(env.OPENROUTER_API_KEY);
@@ -95,6 +107,20 @@ export function loadConfig(env = process.env) {
     timeZone,
     webSearchEnabled,
     webSearchMaxResults,
+    rateLimitRequestsPerHour: parseBoundedInteger(
+      env.QUASI_RATE_LIMIT_REQUESTS_PER_HOUR,
+      DEFAULT_RATE_LIMIT_REQUESTS_PER_HOUR,
+      'QUASI_RATE_LIMIT_REQUESTS_PER_HOUR',
+      1,
+      1000
+    ),
+    maxImagesPerRequest: parseBoundedInteger(
+      env.QUASI_MAX_IMAGES_PER_REQUEST,
+      DEFAULT_MAX_IMAGES_PER_REQUEST,
+      'QUASI_MAX_IMAGES_PER_REQUEST',
+      1,
+      4
+    ),
     logLevel: clean(env.LOG_LEVEL) || DEFAULT_LOG_LEVEL
   };
 }

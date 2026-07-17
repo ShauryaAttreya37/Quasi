@@ -8,6 +8,8 @@ import { createOpenRouterClient } from './openrouterClient.js';
 import { buildMessagesForUser } from './persona.js';
 import { commandMap } from './commands/index.js';
 import { shouldUseWebSearch } from './webSearchPolicy.js';
+import { collectImageUrls } from './imageInputs.js';
+import { createHourlyRateLimiter } from './rateLimiter.js';
 
 const FALLBACK_REPLY =
   '**Quasi hit a provider snag.**\n\nTry again in a moment. Even distributed systems occasionally trip over their own shoelaces.';
@@ -77,6 +79,9 @@ export async function startBot(config, dependencies = {}) {
   const client = dependencies.client || createDiscordClient();
   const openRouter = dependencies.openRouter || createOpenRouterClient(config);
   const logger = dependencies.logger || console;
+  const rateLimiter = dependencies.rateLimiter || createHourlyRateLimiter({
+    maxRequests: config.rateLimitRequestsPerHour
+  });
 
   client.once('ready', () => {
     logger.info(`Quasi is online as ${client.user.tag}.`);
@@ -122,21 +127,39 @@ export async function startBot(config, dependencies = {}) {
 
     if (!decision.respond) return;
 
+
+    const rateLimit = rateLimiter.consume(message.author?.id || 'unknown');
+    if (!rateLimit.allowed) {
+      const waitMinutes = Math.max(1, Math.ceil(rateLimit.retryAfterMs / 60_000));
+      await message.reply({
+        content:
+          `You have hit Quasi's ${config.rateLimitRequestsPerHour} requests/hour limit. ` +
+          `Try again in about ${waitMinutes} minute${waitMinutes === 1 ? '' : 's'}.`,
+        flags: MessageFlags.SuppressEmbeds,
+        allowedMentions: { repliedUser: false }
+      });
+      return;
+    }
     try {
       await message.channel.sendTyping();
       const userContent = stripBotMention(message.content, clientUserId);
+      const imageUrls = collectImageUrls(message, config.maxImagesPerRequest);
+      const promptContent =
+        userContent || (imageUrls.length > 0 ? 'Describe and respond to the attached image.' : message.content);
       const contextMessages = await collectConversationContext(message, clientUserId);
-      const messages = buildMessagesForUser(getUserDisplayName(message), userContent || message.content, {
+      const messages = buildMessagesForUser(getUserDisplayName(message), promptContent, {
         timeZone: config.timeZone,
-        contextMessages
+        contextMessages,
+        imageUrls
       });
       debugLog(config, logger, 'Sending message to OpenRouter.', {
         channelId: message.channelId,
         reason: decision.reason,
-        contextMessages: contextMessages.length
+        contextMessages: contextMessages.length,
+        imageCount: imageUrls.length
       });
       const reply = await openRouter.chat(messages, {
-        webSearchEnabled: config.webSearchEnabled && shouldUseWebSearch(userContent || message.content)
+        webSearchEnabled: config.webSearchEnabled && shouldUseWebSearch(promptContent)
       });
       await sendMarkdownReply(message, reply);
       debugLog(config, logger, 'Sent Quasi reply.', { channelId: message.channelId });

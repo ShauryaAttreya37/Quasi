@@ -42,11 +42,16 @@ QUASI_DEDICATED_CHANNEL_ID=your_optional_dedicated_channel_id
 QUASI_TIME_ZONE=America/Los_Angeles
 QUASI_WEB_SEARCH_ENABLED=true
 QUASI_WEB_SEARCH_MAX_RESULTS=3
+QUASI_RATE_LIMIT_REQUESTS_PER_HOUR=12
+QUASI_MAX_IMAGES_PER_REQUEST=3
 QUASI_PYTHON_BIN=python3
 QUASI_PLOT_TIMEOUT_MS=15000
 ```
 
 Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` to disable it.
+Quasi limits each user to 12 AI replies per rolling hour by default. Mention the bot with up to three PNG, JPEG, WebP, or GIF attachments to include them as vision input.
+Both limits are configurable with the environment variables above.
+
 
 `QUASI_PYTHON_BIN` is the Python interpreter used for `/plot3d`. On Windows this is
 often the full path to `python.exe`; on the Oracle VM `python3` is usually correct.
@@ -120,6 +125,7 @@ builtins, imports, or attribute access — so user input cannot execute arbitrar
 
 Quasi responds when:
 
+- A user mentions the bot with supported image attachments for visual analysis.
 - A user mentions the bot.
 - A user replies to one of the bot's messages.
 
