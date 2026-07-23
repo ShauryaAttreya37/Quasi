@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { ConfigError, loadConfig } from '../src/config.js';
@@ -66,5 +66,36 @@ test('loadConfig validates web search max results', () => {
         QUASI_WEB_SEARCH_MAX_RESULTS: '0'
       }),
     (error) => error instanceof ConfigError && error.message.includes('QUASI_WEB_SEARCH_MAX_RESULTS')
+  );
+});
+
+test('loadConfig supports NVIDIA chat and OCR keys', () => {
+  const config = loadConfig({
+    DISCORD_TOKEN: 'discord-token',
+    NVIDIA_API_KEY: 'nvidia-key',
+    NVIDIA_OCR_API_KEY: 'ocr-key'
+  });
+
+  assert.equal(config.aiProvider, 'nvidia');
+  assert.equal(config.chatApiKey, 'nvidia-key');
+  assert.equal(config.chatModelNormal, 'moonshotai/kimi-k2.6');
+  assert.equal(config.chatBaseUrl, 'https://integrate.api.nvidia.com/v1');
+  assert.equal(config.ocrEnabled, true);
+  assert.equal(config.ocrApiKey, 'ocr-key');
+  assert.equal(config.ocrEndpoint, 'https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v2');
+  assert.equal(config.ocrMergeLevel, 'paragraph');
+});
+
+test('loadConfig validates OCR merge level', () => {
+  assert.throws(
+    () =>
+      loadConfig({
+        DISCORD_TOKEN: 'discord-token',
+        NVIDIA_API_KEY: 'nvidia-key',
+        QUASI_OCR_ENABLED: 'true',
+        NVIDIA_OCR_API_KEY: 'ocr-key',
+        QUASI_OCR_MERGE_LEVEL: 'page'
+      }),
+    (error) => error instanceof ConfigError && error.message.includes('QUASI_OCR_MERGE_LEVEL')
   );
 });

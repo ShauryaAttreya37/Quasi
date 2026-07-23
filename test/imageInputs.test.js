@@ -1,7 +1,7 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { collectImageUrls } from '../src/imageInputs.js';
+import { collectImageAttachments, collectImageUrls } from '../src/imageInputs.js';
 import { buildMessagesForUser } from '../src/persona.js';
 
 test('collectImageUrls accepts supported Discord image attachments only', () => {
@@ -27,6 +27,22 @@ test('buildMessagesForUser creates a multimodal user message with text first', (
     {
       type: 'image_url',
       image_url: { url: 'https://cdn.discordapp.com/image.png' }
+    }
+  ]);
+});
+
+test('collectImageAttachments preserves image metadata for OCR', () => {
+  const attachments = new Map([
+    ['1', { contentType: 'image/png; charset=binary', name: 'a.png', url: 'https://cdn.discordapp.com/a.png', size: 123 }]
+  ]);
+
+  assert.deepEqual(collectImageAttachments({ attachments }, 1), [
+    {
+      url: 'https://cdn.discordapp.com/a.png',
+      proxyURL: undefined,
+      name: 'a.png',
+      contentType: 'image/png',
+      size: 123
     }
   ]);
 });

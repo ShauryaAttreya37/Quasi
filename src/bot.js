@@ -1,4 +1,4 @@
-import { Client, GatewayIntentBits, MessageFlags, Partials } from 'discord.js';
+﻿import { Client, GatewayIntentBits, MessageFlags, Partials } from 'discord.js';
 
 import { extractMathCards } from './mathCards.js';
 import { collectConversationContext } from './conversationContext.js';
@@ -8,7 +8,8 @@ import { createOpenRouterClient } from './openrouterClient.js';
 import { buildMessagesForUser } from './persona.js';
 import { commandMap } from './commands/index.js';
 import { shouldUseWebSearch } from './webSearchPolicy.js';
-import { collectImageUrls } from './imageInputs.js';
+import { collectImageAttachments } from './imageInputs.js';
+import { createOcrClient } from './ocrClient.js';
 import { createHourlyRateLimiter } from './rateLimiter.js';
 
 const FALLBACK_REPLY =
@@ -27,6 +28,26 @@ function getUserDisplayName(message) {
 function debugLog(config, logger, message, context = {}) {
   if (config.logLevel !== 'debug') return;
   logger.debug(message, context);
+}
+
+function formatOcrContext(ocrResults) {
+  const textResults = (Array.isArray(ocrResults) ? ocrResults : [])
+    .map((result, index) => ({ index: index + 1, text: String(result.text || '').trim() }))
+    .filter((result) => result.text);
+
+  if (textResults.length === 0) return '';
+
+  return [
+    'OCR text extracted from the attached image(s):',
+    ...textResults.map((result) => `Image ${result.index}:\n${result.text}`),
+    'Use this OCR as supporting evidence, but prioritize the attached image if it conflicts.'
+  ].join('\n\n');
+}
+
+function buildPromptContent(userContent, messageContent, imageUrls, ocrResults) {
+  const baseContent = userContent || (imageUrls.length > 0 ? 'Answer based on the attached image.' : messageContent);
+  const ocrContext = formatOcrContext(ocrResults);
+  return ocrContext ? `${baseContent}\n\n${ocrContext}` : baseContent;
 }
 
 export async function sendMarkdownReply(message, markdown) {
@@ -78,6 +99,7 @@ export function createDiscordClient() {
 export async function startBot(config, dependencies = {}) {
   const client = dependencies.client || createDiscordClient();
   const openRouter = dependencies.openRouter || createOpenRouterClient(config);
+  const ocr = dependencies.ocr || createOcrClient(config);
   const logger = dependencies.logger || console;
   const rateLimiter = dependencies.rateLimiter || createHourlyRateLimiter({
     maxRequests: config.rateLimitRequestsPerHour
@@ -99,7 +121,7 @@ export async function startBot(config, dependencies = {}) {
       await command.execute(interaction, { config, logger });
     } catch (error) {
       logger.error(`Slash command "${interaction.commandName}" failed.`, error);
-      const reply = { content: '❌ Command failed unexpectedly.' };
+      const reply = { content: 'Command failed unexpectedly.' };
       try {
         if (interaction.deferred || interaction.replied) {
           await interaction.editReply(reply);
@@ -127,7 +149,6 @@ export async function startBot(config, dependencies = {}) {
 
     if (!decision.respond) return;
 
-
     const rateLimit = rateLimiter.consume(message.author?.id || 'unknown');
     if (!rateLimit.allowed) {
       const waitMinutes = Math.max(1, Math.ceil(rateLimit.retryAfterMs / 60_000));
@@ -143,20 +164,31 @@ export async function startBot(config, dependencies = {}) {
     try {
       await message.channel.sendTyping();
       const userContent = stripBotMention(message.content, clientUserId);
-      const imageUrls = collectImageUrls(message, config.maxImagesPerRequest);
-      const promptContent =
-        userContent || (imageUrls.length > 0 ? 'Describe and respond to the attached image.' : message.content);
+      const imageAttachments = collectImageAttachments(message, config.maxImagesPerRequest);
+      const imageUrls = imageAttachments.map((image) => image.url);
+      let ocrResults = [];
+
+      if (config.ocrEnabled && imageAttachments.length > 0) {
+        try {
+          ocrResults = await ocr.extractTextFromImages(imageAttachments);
+        } catch (ocrError) {
+          logger.warn('OCR failed; continuing with image-only context.', ocrError);
+        }
+      }
+
+      const promptContent = buildPromptContent(userContent, message.content, imageUrls, ocrResults);
       const contextMessages = await collectConversationContext(message, clientUserId);
       const messages = buildMessagesForUser(getUserDisplayName(message), promptContent, {
         timeZone: config.timeZone,
         contextMessages,
         imageUrls
       });
-      debugLog(config, logger, 'Sending message to OpenRouter.', {
+      debugLog(config, logger, 'Sending message to chat provider.', {
         channelId: message.channelId,
         reason: decision.reason,
         contextMessages: contextMessages.length,
-        imageCount: imageUrls.length
+        imageCount: imageUrls.length,
+        ocrResultCount: ocrResults.length
       });
       const reply = await openRouter.chat(messages, {
         webSearchEnabled: config.webSearchEnabled && shouldUseWebSearch(promptContent)

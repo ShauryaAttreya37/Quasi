@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { createOpenRouterClient, OpenRouterError } from '../src/openrouterClient.js';
@@ -129,4 +129,35 @@ test('chat throws OpenRouterError on provider failure', async () => {
       error.message.includes('429') &&
       error.message.includes('rate limited')
   );
+});
+
+test('chat sends NVIDIA-compatible request without OpenRouter plugins', async () => {
+  let captured;
+  const fetchImpl = async (url, options) => {
+    captured = { url, options, body: JSON.parse(options.body) };
+    return {
+      ok: true,
+      json: async () => ({ choices: [{ message: { content: 'Image answer.' } }] })
+    };
+  };
+
+  const client = createOpenRouterClient(
+    {
+      aiProvider: 'nvidia',
+      chatApiKey: 'nvidia-key',
+      chatBaseUrl: 'https://integrate.api.nvidia.com/v1',
+      chatModelNormal: 'moonshotai/kimi-k2.6',
+      webSearchEnabled: true,
+      webSearchMaxResults: 3
+    },
+    fetchImpl
+  );
+  const response = await client.chat([{ role: 'user', content: 'hello' }], { webSearchEnabled: true });
+
+  assert.equal(response, 'Image answer.');
+  assert.equal(captured.url, 'https://integrate.api.nvidia.com/v1/chat/completions');
+  assert.equal(captured.options.headers.Authorization, 'Bearer nvidia-key');
+  assert.equal(captured.options.headers['X-Title'], undefined);
+  assert.equal(captured.body.model, 'moonshotai/kimi-k2.6');
+  assert.equal(captured.body.plugins, undefined);
 });
