@@ -8,7 +8,9 @@ const DEFAULT_TIME_ZONE = 'America/Los_Angeles';
 const DEFAULT_WEB_SEARCH_ENABLED = true;
 const DEFAULT_WEB_SEARCH_MAX_RESULTS = 3;
 const DEFAULT_LOG_LEVEL = 'info';
-const DEFAULT_RATE_LIMIT_REQUESTS_PER_HOUR = 12;
+const DEFAULT_RATE_LIMIT_REQUESTS_PER_HOUR = 60;
+const DEFAULT_IMAGE_GENERATION_MODEL = 'google/gemini-2.5-flash-image';
+const DEFAULT_IMAGE_GENERATION_REQUESTS_PER_24_HOURS = 5;
 const DEFAULT_MAX_IMAGES_PER_REQUEST = 3;
 const DEFAULT_OCR_TIMEOUT_MS = 30000;
 const DEFAULT_OCR_MAX_IMAGE_BYTES = 8 * 1024 * 1024;
@@ -77,8 +79,8 @@ function parseBoundedInteger(value, defaultValue, name, minimum, maximum) {
   return parsed;
 }
 
-function parseProvider(value, hasNvidiaKey) {
-  const provider = clean(value).toLowerCase() || (hasNvidiaKey ? 'nvidia' : 'openrouter');
+function parseProvider(value) {
+  const provider = clean(value).toLowerCase() || 'openrouter';
   if (['openrouter', 'nvidia', 'openai-compatible'].includes(provider)) return provider;
   throw new ConfigError('Invalid QUASI_AI_PROVIDER: use openrouter, nvidia, or openai-compatible.');
 }
@@ -92,9 +94,10 @@ function parseOcrMergeLevel(value) {
 export function loadConfig(env = process.env) {
   const discordToken = clean(env.DISCORD_TOKEN);
   const nvidiaApiKey = clean(env.NVIDIA_API_KEY);
-  const aiProvider = parseProvider(env.QUASI_AI_PROVIDER, Boolean(nvidiaApiKey));
+  const aiProvider = parseProvider(env.QUASI_AI_PROVIDER);
   const genericAiApiKey = clean(env.QUASI_AI_API_KEY);
   const openRouterApiKey = clean(env.OPENROUTER_API_KEY);
+  const openRouterBaseUrl = clean(env.OPENROUTER_BASE_URL) || DEFAULT_OPENROUTER_BASE_URL;
   const chatApiKey = genericAiApiKey || (aiProvider === 'nvidia' ? nvidiaApiKey : openRouterApiKey);
   const ocrApiKey = clean(env.QUASI_OCR_API_KEY) || clean(env.NVIDIA_OCR_API_KEY) || clean(env.NVIDIA_OCR);
   const ocrEnabled = parseBoolean(env.QUASI_OCR_ENABLED, Boolean(ocrApiKey));
@@ -118,14 +121,14 @@ export function loadConfig(env = process.env) {
 
   const chatModelNormal =
     clean(env.QUASI_AI_MODEL_NORMAL) ||
-    clean(env.NVIDIA_MODEL_NORMAL) ||
-    clean(env.OPENROUTER_MODEL_NORMAL) ||
-    (aiProvider === 'nvidia' ? DEFAULT_NVIDIA_MODEL : DEFAULT_MODEL);
+    (aiProvider === 'nvidia'
+      ? clean(env.NVIDIA_MODEL_NORMAL) || DEFAULT_NVIDIA_MODEL
+      : clean(env.OPENROUTER_MODEL_NORMAL) || DEFAULT_MODEL);
   const chatBaseUrl =
     clean(env.QUASI_AI_BASE_URL) ||
-    clean(env.NVIDIA_BASE_URL) ||
-    clean(env.OPENROUTER_BASE_URL) ||
-    (aiProvider === 'nvidia' ? DEFAULT_NVIDIA_BASE_URL : DEFAULT_OPENROUTER_BASE_URL);
+    (aiProvider === 'nvidia'
+      ? clean(env.NVIDIA_BASE_URL) || DEFAULT_NVIDIA_BASE_URL
+      : clean(env.OPENROUTER_BASE_URL) || DEFAULT_OPENROUTER_BASE_URL);
 
   return {
     discordToken,
@@ -136,9 +139,18 @@ export function loadConfig(env = process.env) {
     nvidiaApiKey: nvidiaApiKey || undefined,
     openRouterApiKey,
     openRouterModelNormal: chatModelNormal,
-    openRouterBaseUrl: chatBaseUrl,
+    openRouterBaseUrl,
     openRouterSiteUrl: optionalClean(env.OPENROUTER_SITE_URL),
     openRouterAppName: clean(env.OPENROUTER_APP_NAME) || DEFAULT_APP_NAME,
+    imageGenerationModel:
+      clean(env.OPENROUTER_IMAGE_GENERATION_MODEL) || DEFAULT_IMAGE_GENERATION_MODEL,
+    imageGenerationRequestsPer24Hours: parseBoundedInteger(
+      env.QUASI_IMAGE_GENERATION_REQUESTS_PER_24_HOURS,
+      DEFAULT_IMAGE_GENERATION_REQUESTS_PER_24_HOURS,
+      'QUASI_IMAGE_GENERATION_REQUESTS_PER_24_HOURS',
+      1,
+      100
+    ),
     ocrEnabled,
     ocrApiKey: ocrApiKey || undefined,
     ocrEndpoint:

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { createHourlyRateLimiter } from '../src/rateLimiter.js';
+import { createDailyRateLimiter, createHourlyRateLimiter } from '../src/rateLimiter.js';
 
 test('limits each user independently within a rolling window', () => {
   let timestamp = 1_000;
@@ -19,5 +19,20 @@ test('limits each user independently within a rolling window', () => {
   assert.equal(limiter.consume('user-b').allowed, true);
 
   timestamp += 60_001;
+  assert.equal(limiter.consume('user-a').allowed, true);
+});
+
+test('daily limiter allows five generations per user in a rolling 24-hour window', () => {
+  let timestamp = 10_000;
+  const limiter = createDailyRateLimiter({ maxRequests: 5, now: () => timestamp });
+
+  for (let index = 0; index < 5; index += 1) {
+    assert.equal(limiter.consume('user-a').allowed, true);
+  }
+  const denied = limiter.consume('user-a');
+  assert.equal(denied.allowed, false);
+  assert.equal(denied.retryAfterMs, 24 * 60 * 60 * 1000);
+
+  timestamp += 24 * 60 * 60 * 1000;
   assert.equal(limiter.consume('user-a').allowed, true);
 });

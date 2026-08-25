@@ -22,6 +22,7 @@ test('loadConfig trims values and applies production defaults', () => {
   });
 
   assert.equal(config.discordToken, 'discord-token');
+  assert.equal(config.aiProvider, 'openrouter');
   assert.equal(config.openRouterApiKey, 'openrouter-key');
   assert.equal(config.openRouterModelNormal, 'google/gemini-2.5-flash-lite');
   assert.equal(config.openRouterBaseUrl, 'https://openrouter.ai/api/v1');
@@ -72,6 +73,7 @@ test('loadConfig validates web search max results', () => {
 test('loadConfig supports NVIDIA chat and OCR keys', () => {
   const config = loadConfig({
     DISCORD_TOKEN: 'discord-token',
+    QUASI_AI_PROVIDER: 'nvidia',
     NVIDIA_API_KEY: 'nvidia-key',
     NVIDIA_OCR_API_KEY: 'ocr-key'
   });
@@ -86,11 +88,28 @@ test('loadConfig supports NVIDIA chat and OCR keys', () => {
   assert.equal(config.ocrMergeLevel, 'paragraph');
 });
 
+test('loadConfig defaults to OpenRouter even when NVIDIA settings are present', () => {
+  const config = loadConfig({
+    DISCORD_TOKEN: 'discord-token',
+    OPENROUTER_API_KEY: 'openrouter-key',
+    OPENROUTER_MODEL_NORMAL: 'openai/gpt-4.1-mini',
+    NVIDIA_API_KEY: 'nvidia-key',
+    NVIDIA_MODEL_NORMAL: 'moonshotai/kimi-k2.6',
+    NVIDIA_BASE_URL: 'https://integrate.api.nvidia.com/v1'
+  });
+
+  assert.equal(config.aiProvider, 'openrouter');
+  assert.equal(config.chatApiKey, 'openrouter-key');
+  assert.equal(config.chatModelNormal, 'openai/gpt-4.1-mini');
+  assert.equal(config.chatBaseUrl, 'https://openrouter.ai/api/v1');
+});
+
 test('loadConfig validates OCR merge level', () => {
   assert.throws(
     () =>
       loadConfig({
         DISCORD_TOKEN: 'discord-token',
+        QUASI_AI_PROVIDER: 'nvidia',
         NVIDIA_API_KEY: 'nvidia-key',
         QUASI_OCR_ENABLED: 'true',
         NVIDIA_OCR_API_KEY: 'ocr-key',

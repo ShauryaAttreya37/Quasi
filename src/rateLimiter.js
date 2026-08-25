@@ -1,6 +1,7 @@
 const ONE_HOUR_MS = 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * ONE_HOUR_MS;
 
-export function createHourlyRateLimiter(options = {}) {
+export function createRollingWindowRateLimiter(options = {}) {
   const maxRequests = options.maxRequests || 12;
   const windowMs = options.windowMs || ONE_HOUR_MS;
   const now = options.now || Date.now;
@@ -30,4 +31,12 @@ export function createHourlyRateLimiter(options = {}) {
       };
     }
   };
+}
+
+export function createHourlyRateLimiter(options = {}) {
+  return createRollingWindowRateLimiter({ ...options, windowMs: options.windowMs || ONE_HOUR_MS });
+}
+
+export function createDailyRateLimiter(options = {}) {
+  return createRollingWindowRateLimiter({ ...options, windowMs: options.windowMs || ONE_DAY_MS });
 }

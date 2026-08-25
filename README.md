@@ -1,6 +1,6 @@
 ﻿# Quasi
 
-Quasi is a Node.js Discord AI chatbot powered by an OpenAI-compatible chat provider. The default local configuration uses NVIDIA NIM.
+Quasi is a Node.js Discord AI chatbot powered by OpenRouter. NVIDIA NIM remains available as an explicitly configured alternative provider.
 
 The default v1 behavior is intentionally narrow: Quasi replies only when directly mentioned or when someone replies to one of Quasi's messages. A dedicated channel can be configured now, but ordinary ambient channel chatter is still ignored until that mode is deliberately added later.
 
@@ -12,7 +12,7 @@ Quasi is highly intelligent, technically serious, kind underneath, and not perfo
 
 - Node.js 18.18 or newer
 - A Discord bot token
-- An NVIDIA API key, or an OpenRouter API key when `QUASI_AI_PROVIDER=openrouter`
+- An OpenRouter API key
 - Discord bot permissions for reading messages and sending messages
 - Discord **Message Content Intent** enabled in the bot portal
 - **Python 3** with `numpy` and `matplotlib` (only for the `/plot3d` command)
@@ -36,10 +36,14 @@ Fill in `.env`:
 DISCORD_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_application_id
 DISCORD_GUILD_ID=your_test_guild_id_optional
-QUASI_AI_PROVIDER=nvidia
-NVIDIA_API_KEY=your_nvidia_api_key
-NVIDIA_MODEL_NORMAL=moonshotai/kimi-k2.6
-NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
+QUASI_AI_PROVIDER=openrouter
+OPENROUTER_API_KEY=your_openrouter_api_key
+OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
+OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
+OPENROUTER_SITE_URL=
+OPENROUTER_APP_NAME=Quasi
+OPENROUTER_IMAGE_GENERATION_MODEL=google/gemini-2.5-flash-image
+QUASI_IMAGE_GENERATION_REQUESTS_PER_24_HOURS=5
 NVIDIA_OCR_API_KEY=your_nvidia_ocr_api_key
 NVIDIA_OCR_ENDPOINT=https://ai.api.nvidia.com/v1/cv/nvidia/nemotron-ocr-v2
 QUASI_OCR_ENABLED=true
@@ -48,15 +52,15 @@ QUASI_DEDICATED_CHANNEL_ID=your_optional_dedicated_channel_id
 QUASI_TIME_ZONE=America/Los_Angeles
 QUASI_WEB_SEARCH_ENABLED=true
 QUASI_WEB_SEARCH_MAX_RESULTS=3
-QUASI_RATE_LIMIT_REQUESTS_PER_HOUR=12
+QUASI_RATE_LIMIT_REQUESTS_PER_HOUR=60
 QUASI_MAX_IMAGES_PER_REQUEST=3
 QUASI_PYTHON_BIN=python3
 QUASI_PLOT_TIMEOUT_MS=15000
 ```
 
 Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` to disable it.
-Quasi limits each user to 12 AI replies per rolling hour by default. Mention the bot with up to three PNG, JPEG, WebP, or GIF attachments to include them as vision input. When OCR is enabled, PNG and JPEG attachments are also sent through OCR and the extracted text is added to the image prompt.
-Both limits are configurable with the environment variables above.
+Quasi limits each user to 60 AI replies per rolling hour by default. Mention the bot with up to three PNG, JPEG, WebP, or GIF attachments to include them as vision input. When OCR is enabled, PNG and JPEG attachments are also sent through OCR and the extracted text is added to the image prompt.
+Nano Banana image generation has a separate per-user limit of five generations per rolling 24-hour window. These limits are configurable with the environment variables above and reset when the bot process restarts.
 
 
 `QUASI_PYTHON_BIN` is the Python interpreter used for `/plot3d`. On Windows this is
@@ -101,6 +105,15 @@ Use the production deployment guide in [docs/deployment/oracle-vm.md](docs/deplo
 Because Discord does not render LaTeX in bot messages, Quasi renders math and plots to
 images and posts them as embeds.
 
+### `/imagine`
+
+Generate one image with OpenRouter's Nano Banana (`google/gemini-2.5-flash-image`).
+
+- `prompt` (required) — description of the image to generate
+- `aspect_ratio` (optional) — square, landscape, or portrait output shape
+
+Each Discord user can generate up to five images in a rolling 24-hour window by default.
+
 ### `/latex`
 
 Render a LaTeX expression to a PNG.
@@ -141,23 +154,26 @@ Quasi ignores:
 - Empty messages.
 - Normal channel chatter, even in the configured dedicated channel.
 
+## Chat Memory
+
+Quasi includes short-term channel context with each chat request: up to 10 recent messages and 4,000 characters from the last 30 minutes. This context is fetched from Discord on demand. There is no persistent, cross-channel, or long-term user memory.
+
 ## Project Layout
 
 ```text
 src/config.js            environment validation
 src/persona.js           Quasi's system prompt and message builder
 src/openrouterClient.js  OpenAI-compatible chat completions client
+src/imageGenerationClient.js  OpenRouter image generation client
 src/ocrClient.js         NVIDIA OCR client for image text extraction
 src/messagePolicy.js     Discord response policy
 src/discordFormat.js     Discord reply splitting
 src/latexRender.js       LaTeX -> PNG via MathJax + resvg
 src/plot3d.js            spawns the Python 3D plot worker
 src/python/plot3d.py     matplotlib 3D plotter with safe expression eval
-src/commands/            slash command definitions (latex, plot3d)
+src/commands/            slash command definitions (imagine, latex, plot3d)
 src/bot.js               Discord runtime wiring
 scripts/register-commands.js  registers slash commands with Discord
 index.js                 startup entrypoint
 ```
-
-
 

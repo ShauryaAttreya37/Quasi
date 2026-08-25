@@ -59,16 +59,19 @@ Set these values:
 DISCORD_TOKEN=your_discord_bot_token
 DISCORD_CLIENT_ID=your_discord_application_id
 DISCORD_GUILD_ID=
+QUASI_AI_PROVIDER=openrouter
 OPENROUTER_API_KEY=your_openrouter_api_key
 OPENROUTER_MODEL_NORMAL=google/gemini-2.5-flash-lite
 OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 OPENROUTER_SITE_URL=
 OPENROUTER_APP_NAME=Quasi
+OPENROUTER_IMAGE_GENERATION_MODEL=google/gemini-2.5-flash-image
+QUASI_IMAGE_GENERATION_REQUESTS_PER_24_HOURS=5
 QUASI_DEDICATED_CHANNEL_ID=
 QUASI_TIME_ZONE=America/Los_Angeles
 QUASI_WEB_SEARCH_ENABLED=true
 QUASI_WEB_SEARCH_MAX_RESULTS=3
-QUASI_RATE_LIMIT_REQUESTS_PER_HOUR=12
+QUASI_RATE_LIMIT_REQUESTS_PER_HOUR=60
 QUASI_MAX_IMAGES_PER_REQUEST=3
 QUASI_PYTHON_BIN=python3
 QUASI_PLOT_TIMEOUT_MS=15000
@@ -79,6 +82,7 @@ Keep `.env` only on the VM. Do not commit it.
 
 Web search uses OpenRouter's `web` plugin and can add provider/search costs. Set `QUASI_WEB_SEARCH_ENABLED=false` if you need to disable live search.
 Chat requests are limited per user over a rolling hour. Mentioned messages can include up to the configured number of PNG, JPEG, WebP, or GIF image attachments for vision analysis.
+The `/imagine` command uses Nano Banana through OpenRouter and is limited to five generations per user over a rolling 24-hour window. In-memory limits reset when the bot restarts.
 
 
 ## 4. Start Quasi
@@ -86,7 +90,7 @@ Chat requests are limited per user over a rolling hour. Mentioned messages can i
 ```bash
 npm run check
 npm test
-npm run register   # register /latex and /plot3d slash commands (run again after command changes)
+npm run register   # register /imagine, /latex, and /plot3d (run again after command changes)
 pm2 start index.js --name quasi
 pm2 save
 pm2 startup systemd

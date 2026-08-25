@@ -5,12 +5,13 @@ import { collectConversationContext } from './conversationContext.js';
 import { splitDiscordMessage } from './discordFormat.js';
 import { getMessageResponseDecision } from './messagePolicy.js';
 import { createOpenRouterClient } from './openrouterClient.js';
+import { createOpenRouterImageClient } from './imageGenerationClient.js';
 import { buildMessagesForUser } from './persona.js';
 import { commandMap } from './commands/index.js';
 import { shouldUseWebSearch } from './webSearchPolicy.js';
 import { collectImageAttachments } from './imageInputs.js';
 import { createOcrClient } from './ocrClient.js';
-import { createHourlyRateLimiter } from './rateLimiter.js';
+import { createDailyRateLimiter, createHourlyRateLimiter } from './rateLimiter.js';
 
 const FALLBACK_REPLY =
   '**Quasi hit a provider snag.**\n\nTry again in a moment. Even distributed systems occasionally trip over their own shoelaces.';
@@ -99,10 +100,14 @@ export function createDiscordClient() {
 export async function startBot(config, dependencies = {}) {
   const client = dependencies.client || createDiscordClient();
   const openRouter = dependencies.openRouter || createOpenRouterClient(config);
+  const imageGenerator = dependencies.imageGenerator || createOpenRouterImageClient(config);
   const ocr = dependencies.ocr || createOcrClient(config);
   const logger = dependencies.logger || console;
   const rateLimiter = dependencies.rateLimiter || createHourlyRateLimiter({
     maxRequests: config.rateLimitRequestsPerHour
+  });
+  const imageRateLimiter = dependencies.imageRateLimiter || createDailyRateLimiter({
+    maxRequests: config.imageGenerationRequestsPer24Hours
   });
 
   client.once('ready', () => {
@@ -118,7 +123,7 @@ export async function startBot(config, dependencies = {}) {
     if (!command) return;
 
     try {
-      await command.execute(interaction, { config, logger });
+      await command.execute(interaction, { config, logger, imageGenerator, imageRateLimiter });
     } catch (error) {
       logger.error(`Slash command "${interaction.commandName}" failed.`, error);
       const reply = { content: 'Command failed unexpectedly.' };
